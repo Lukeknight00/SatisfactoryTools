@@ -1,3 +1,6 @@
+from material import MaterialSpec
+
+
 class Recipe:
     name: str
     duration: float

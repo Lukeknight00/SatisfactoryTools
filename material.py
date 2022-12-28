@@ -2,10 +2,6 @@ from dataclasses import fields
 
 
 class MaterialSpec:
-    """
-    TODO: give this a widget
-    """
-
     def __add__(self, other):
         if not isinstance(other, type(self)):
             return NotImplemented
