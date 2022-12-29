@@ -1,19 +1,19 @@
-class Machine:
-    # TODO: don't subclass machines, just take a category argument and set parameters from config/recipe. It doesn't matter what the number of outputs is
+from material import MaterialSpec
+from recipe import Recipe
 
-    # TODO: weakref these
+
+class Machine:
     input_producers: dict["Machine", str]
     output_consumers: dict["Machine", str]
 
     power_consumption: float
     power_production: float
 
-    clock_speed: float  # TODO
-
     def __init__(self, recipe: Recipe):
         self.input_producers = {}
         self.output_consumers = {}
         self.recipe = recipe
+        self.power_consumption += recipe.variable_power_modifier
 
     def __str__(self):
         return f"<{self.__class__.__name__}: {self.recipe}>"

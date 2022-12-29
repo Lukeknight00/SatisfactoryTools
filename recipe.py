@@ -4,11 +4,13 @@ from material import MaterialSpec
 class Recipe:
     name: str
     duration: float
+    variable_power_modifier: float
 
-    def __init__(self, name: str, ingredients: MaterialSpec, products: MaterialSpec):
+    def __init__(self, name: str, ingredients: MaterialSpec, products: MaterialSpec, power_modifier: float = 0):
         self.ingredients = ingredients
         self.products = products
         self.name = name
+        self.variable_power_modifier = power_modifier
 
     def __add__(self, material_spec: MaterialSpec):
         return material_spec + self.products - self.ingredients

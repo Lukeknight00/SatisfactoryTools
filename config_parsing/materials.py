@@ -33,7 +33,7 @@ def parse_materials(simple_config: dict) -> Type["Materials"]:
                        float,
                        field(default=0,
                              metadata={"internal_name": internal_name,
+                                       # FIXME
                                        "material_type": ...,
                                        "energy_value": ...})))
-    # TODO:
     return make_dataclass("Materials", fields, bases=(MaterialSpec,), repr=False)

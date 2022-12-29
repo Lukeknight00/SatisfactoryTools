@@ -1,14 +1,7 @@
-# TODO: resource wells
-"Class'/Script/FactoryGame.FGBuildableFrackingExtractor'" # oil extractor
 import itertools
 
 from categorized_collection import CategorizedCollection
-
-"Class'/Script/FactoryGame.FGBuildableFrackingActivator'" # resource well pressurizer
-
-# TODO: geothermal generation--need to work with avg?--variability over time kinda screws with optimization
-# TODO: pre-bundle with storage?
-"Class'/Script/FactoryGame.FGBuildableGeneratorGeoThermal'"
+from machine import Machine
 
 BUILDABLE_KEYS = [
     # assembler, constructor, blender, oilrefinery, foundry, smelter, manufacturer
@@ -24,7 +17,8 @@ EXTRACTOR_KEYS = [
 
 GENERATOR_KEYS = [
     "Class'/Script/FactoryGame.FGBuildableGeneratorFuel'",
-    "Class'/Script/FactoryGame.FGBuildableGeneratorNuclear'"
+    "Class'/Script/FactoryGame.FGBuildableGeneratorNuclear'",
+    "Class'/Script/FactoryGame.FGBuildableGeneratorGeoThermal'"
 ]
 
 def _values_for_key_list(simple_config: dict, key_list: list):
@@ -60,19 +54,12 @@ def _values_for_key_list(simple_config: dict, key_list: list):
 """
 
 def parse_machines(simple_config: dict) -> CategorizedCollection:
-    for machine in _values_for_key_list(simple_config, BUILDABLE_KEYS):
-        pass
+    machines = {}
 
-    for machine in _values_for_key_list(simple_config, EXTRACTOR_KEYS):
-        # tag both mk* and solid/liquid/gas
-        # mAllowedResources is indicator of a fluid extractor
-        # mParticleMap is indicator of solid extractor
-        pass
+    for machine in _values_for_key_list(simple_config, BUILDABLE_KEYS + EXTRACTOR_KEYS + GENERATOR_KEYS):
+        power_consumption = machine["mPowerConsumption"]
+        name = ...
+        machine_type = type(name, (Machine,), {"power_consumption": power_consumption})
 
-    for machine in _values_for_key_list(simple_config, GENERATOR_KEYS):
-        if "mVariablePowerProductionCycleFactor" in machine:
-            # use average power if powerplant is variable
-            pass
-        # "mFuel" is key for generator. Can be class of fuel items or fuel items themselves
-        # energy values are stored on fuel
-        pass
+    return machines
+
