@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 
 from categorized_collection import CategorizedCollection
@@ -6,8 +7,11 @@ from categorized_collection import CategorizedCollection
 
 def simplify_config(game_config: dict) -> dict:
     simple_config = {}
+    native_class_pattern = r".*\.(\w+)'"
     for config in game_config:
-        simple_config[config["NativeClass"]] = {item["ClassName"]: item for item in config["Classes"]}
+        # TODO: strip out the Class'/Script/FactoryGame.
+        key = re.match(config["NativeClass"], native_class_pattern)[0]
+        simple_config[key] = {item["ClassName"]: item for item in config["Classes"]}
     return simple_config
 
 
