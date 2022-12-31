@@ -3,14 +3,17 @@ import re
 from dataclasses import dataclass
 
 from categorized_collection import CategorizedCollection
+from config_parsing.machines import parse_machines
+from config_parsing.materials import parse_materials
+from config_parsing.recipes import parse_recipes
 
 
 def simplify_config(game_config: dict) -> dict:
     simple_config = {}
-    native_class_pattern = r".*\.(\w+)'"
+    native_class_pattern = r".*\.(\w+)'?"
     for config in game_config:
         # TODO: strip out the Class'/Script/FactoryGame.
-        key = re.match(config["NativeClass"], native_class_pattern)[0]
+        key = re.match(native_class_pattern, config["NativeClass"]).group(1)
         simple_config[key] = {item["ClassName"]: item for item in config["Classes"]}
     return simple_config
 

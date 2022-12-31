@@ -1,13 +1,15 @@
 from copy import copy
-from dataclasses import dataclass
-from typing import re
+import re
 
 from categorized_collection import CategorizedCollection
 from config_parsing.machines import _values_for_key_list
-from config_parsing.standardization import standardize
+from config_parsing.materials import MaterialType, get_material_metadata
+from config_parsing.standardization import standardize, get_class_name
+from machine import Machine
+from material import MaterialSpec
 from recipe import Recipe
 
-RECIPE_KEY = "Class'/Script/FactoryGame.FGRecipe'"
+RECIPE_KEY = "FGRecipe"
 
 # FIXME: repeated
 EXTRACTOR_KEYS = [
@@ -29,7 +31,7 @@ GENERATOR_KEYS = [
 # TODO: isn't variable based on fuel
 
 
-def make_recipes(simple_config: dict, machine_mapping: dict[str, Machine], material_mapping: dict[str, str]) -> list:
+def parse_recipes(simple_config: dict, machine_mapping: dict[str, Machine], material_mapping: dict[str, str]) -> list:
     resource_capture_group = r".*?\.(\w+).*?"
     ingredients_pattern = rf"\(ItemClass={resource_capture_group},Amount=(\d+)\)"
     machines_pattern = fr"({'|'.join(re.escape(m) for m in machine_mapping.keys())})"
@@ -47,66 +49,76 @@ def make_recipes(simple_config: dict, machine_mapping: dict[str, Machine], mater
 
     return recipes
 
-def _parse_normal_recipes(simple_config: dict, material_mapping):
+
+def _parse_normal_recipes(simple_config: dict, materials_class: type[MaterialSpec]):
     resource_capture_group = r".*?\.(\w+).*?"
     ingredients_pattern = rf"\(ItemClass={resource_capture_group},Amount=(\d+)\)"
     recipes = CategorizedCollection()
 
+    material_mapping = {m.internal_name: m for m in get_material_metadata(materials_class)}
+
+    def material_scale(material_internal_name):
+        material_type = material_mapping[material_internal_name].material_type
+        return .001 if material_type in [MaterialType.LIQUID.value, MaterialType.GAS.value] else 1
+
     for config in simple_config[RECIPE_KEY].values():
-        machine = re.search(machines_pattern, config["mProducedIn"])
-
-        if machine is None:
-            continue
-
-        machine = machine_mapping[machine[0]]
+        recipe_name = standardize(config["mDisplayName"])
 
         try:
-            # FIXME: this metadata dict has approximately 4 different definitions
-            recipe_name = standardize(config["mDisplayName"])
-            ingredients = {material_mapping[name]: float(amt) / 1000 if material_mapping["material_type"] in ["RF_LIQUID",
-                                                                                                              "RF_GAS"] else float(
-                amt) for name, amt in re.findall(ingredients_pattern, config["mIngredients"])}
-            products = {material_mapping[name]: float(amt) / 1000 if material_mapping["material_type"] in [
-                "RF_LIQUID",
-                "RF_GAS"] else float(
-                amt) for name, amt in re.findall(ingredients_pattern, config["mProduct"])}
+            ingredients = [(name, amt) for name, amt in re.findall(ingredients_pattern, config["mIngredients"])]
+            ingredients = {material_mapping[name].friendly_name: float(amt) * material_scale(name)
+                           for name, amt in ingredients}
 
-            duration = 60 / float(config["mManufactoringDuration"])
+            products = [(name, amt) for name, amt in re.findall(ingredients_pattern, config["mProduct"])]
+            products = {material_mapping[name].friendly_name: float(amt) * material_scale(name)
+                        for name, amt in products}
+        except KeyError:
+            # we don't have the resources in the material_mapping--usually indicates a non-automated
+            # recipe. TODO: have a better detection mechanism for this
+            continue
 
-            if "alternate" in config["FullName"].lower():
-                recipes.add_tag(recipe_name, "alternate")
-            else:
-                recipes.add_tag(recipe_name, "core")
+        duration = float(config["mManufactoringDuration"]) / 60  # seconds to minutes
 
-            # TODO: use parsed material class
-            recipes[recipe_name] = Recipe(recipe_name, Materials(**ingredients),
-                                          Materials(**products), duration=duration)
+        recipes[recipe_name] = Recipe(recipe_name, materials_class(**ingredients),
+                                      materials_class(**products), duration=duration)
 
-        except Exception as e:
-            print(f"missing: {e}")
-            print()
+        for machine in  config["mProducedIn"].strip("()").split(","):
+            recipes.set_tag(recipe_name, get_class_name(machine))
+
+        if "alternate" in config["FullName"].lower():
+            recipes.set_tag(recipe_name, "alternate")
+        else:
+            recipes.set_tag(recipe_name, "core")
+
+    return recipes
 
 
-def _parse_extractor_recipes():
+def _parse_extractor_recipes(simple_config: dict, materials_class: type[MaterialSpec]):
     recipes = CategorizedCollection()
+    material_mapping = {m.internal_name: m for m in get_material_metadata(materials_class)}
 
-    def get_production_rate(config):
-        return (60 / float(config["mExtractCycleTime"])) * float(config["mItemsPerCycle"])
+    particle_map_pattern = r"\(ResourceNode.*?=.*?\.(\w+),ParticleSystem.*?\)"
 
-    # FIXME: I think this qualifies as a mess
+    # TODO: tag with mk*
+
     for key in EXTRACTOR_KEYS:
         for extractor in simple_config[key].values():
-            if "RF_SOLID" in extractor["mAllowedResourceForms"]:
-                for material in map(lambda x: standardize(material_config[x]["mDisplayName"]),
-                                    simple_config["Class'/Script/FactoryGame.FGResourceDescriptor'"].keys()):
-                    recipe = Recipe(material, MaterialSpec(), MaterialSpec(
-                        **{material: get_production_rate(extractor)}))
-            elif "RF_LIQUID" in extractor["mAllowedResourceForms"] or "RF_GAS" in extractor["mAllowedResourceForms"]:
-                for material in map(
-                        lambda x: standardize(material_config[re.search(resource_capture_group, x)[1]]["mDisplayName"]),
-                        extractor["mAllowedResources"].strip("()").split(",")):
-                    machines.fluid_extractors.append(Extractor(Recipe(material, MaterialSpec(), MaterialSpec(
-                        **{material: get_production_rate(extractor) / 1000}))))
+            scale = 1 if MaterialType.SOLID.value in extractor["mAllowedResourceForms"] else .001
+            items_per_cycle = float(extractor["mItemsPerCycle"]) * scale
+            duration = 60 / float(extractor["mExtractCycleTime"])
+
+            if extractor["mAllowedResources"] != "":
+                resources = map(get_class_name, extractor["mAllowedResources"].strip("()").split(","))
+            else:
+                resources = re.findall(particle_map_pattern, extractor["mParticleMap"])
+
+            for resource in resources:
+                resource = material_mapping[resource].friendly_name
+                recipe = Recipe(resource, materials_class(),
+                                materials_class(**{resource: items_per_cycle}),
+                                duration=duration)
+                recipes[resource] = recipe
+                recipes.set_tag(resource, "extractor")
 
     return recipes
 
@@ -145,8 +157,10 @@ def _parse_generator_recipes(simple_config, material_mapping, material_class):
                 recipe = copy(recipe)
                 for fuel_type in simple_config[recipe["mFuelClass"]]:
                     recipe["mFuelClass"] = fuel_type["ClassName"]
-                    recipes[] = _make_recipe(recipe, generator)
 
-            recipes[] = _make_recipe(recipe)
+                    # TODO
+                    recipes["TODO"] = _make_recipe(recipe, generator)
+
+            recipes["TODO"] = _make_recipe(recipe)
 
     return recipes

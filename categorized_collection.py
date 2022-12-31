@@ -14,11 +14,11 @@ class CategorizedCollection:
     _tags: dict
 
     def __init__(self, items: dict[T, S] = None, tags: dict[str, set[T]] = None):
-        self.tags = defaultdict(list)
-        if tags:
-            self.tags.update(tags)
+        self._tags = defaultdict(list)
+        if tags is not None:
+            self._tags.update(tags)
 
-        self.items = items or {}
+        self._values = items or {}
 
     def keys(self):
         yield from self._values.keys()
@@ -33,13 +33,16 @@ class CategorizedCollection:
         self._values.update(dict(other.items))
 
         for tag in other.tags:
-            self._tags[tag] = self.tags[tag] | other.tags[tag]
+            self._tags[tag] = self.tag[tag] | other.tag[tag]
 
-    def set_tag(self, tag, item):
+    def set_tag(self, item, tag):
         self._tags[tag].append(item)
 
     def __getitem__(self, item):
         return self._values[item]
+
+    def __setitem__(self, key, value):
+        self._values[key] = value
 
     @property
     def tags(self):
@@ -47,4 +50,4 @@ class CategorizedCollection:
 
     @property
     def tag(self):
-        return lambda tag: [self._values[key] for key in self._tags[tag]]
+        return lambda tag: set(self._values[key] for key in self._tags[tag])

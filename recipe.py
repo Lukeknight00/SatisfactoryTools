@@ -2,15 +2,20 @@ from material import MaterialSpec
 
 
 class Recipe:
+    """
+    Materials scaled to materials/min
+    """
+
     name: str
     duration: float
     variable_power_modifier: float
 
-    def __init__(self, name: str, ingredients: MaterialSpec, products: MaterialSpec, power_modifier: float = 0):
-        self.ingredients = ingredients
-        self.products = products
+    def __init__(self, name: str, ingredients: MaterialSpec, products: MaterialSpec, duration: float, power_modifier: float = 0):
+        self.ingredients = ingredients * (1/duration)
+        self.products = products * (1/duration)
         self.name = name
         self.variable_power_modifier = power_modifier
+        self.duration = duration
 
     def __add__(self, material_spec: MaterialSpec):
         return material_spec + self.products - self.ingredients

@@ -32,9 +32,11 @@ def parse_machines(simple_config: dict) -> CategorizedCollection:
 
     for machine in _values_for_key_list(simple_config, BUILDABLE_KEYS + EXTRACTOR_KEYS + GENERATOR_KEYS):
         power_consumption = machine["mPowerConsumption"]
+        power_production = machine.get("mPowerProduction", 0)
         name = standardize(machine["mDisplayName"])
         key = machine["ClassName"]
-        machine_type = type(name, (Machine,), {"power_consumption": power_consumption})
+        machine_type = type(name, (Machine,), {"power_consumption": power_consumption,
+                                               "power_production": power_production})
         machines[key] = machine_type
 
     return machines
