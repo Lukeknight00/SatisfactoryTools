@@ -11,8 +11,9 @@ class Recipe:
     variable_power_modifier: float
 
     def __init__(self, name: str, ingredients: MaterialSpec, products: MaterialSpec, duration: float, power_modifier: float = 0):
-        self.ingredients = ingredients * (1/duration)
-        self.products = products * (1/duration)
+        # FIXME: add div to MaterialSpec
+        self.ingredients = ingredients * (1 / duration)
+        self.products = products * (1 / duration)
         self.name = name
         self.variable_power_modifier = power_modifier
         self.duration = duration

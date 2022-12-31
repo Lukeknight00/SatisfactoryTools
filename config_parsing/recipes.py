@@ -123,44 +123,62 @@ def _parse_extractor_recipes(simple_config: dict, materials_class: type[Material
     return recipes
 
 
-def _parse_generator_recipes(simple_config, material_mapping, material_class):
+def _parse_generator_recipes(simple_config, materials_class):
     # list of recipes in mFuel, fuel is mFuelClass, additional resource is mSupplementalResourceClass
     # byproduct in mByProduct, amount in mByProductAmount
     # fuel amount and byproducts are on root config, mFuelLoadAmount and mSupplementalLoadAmount
-    def _make_recipe(recipe_config, generator):
-        fuel = recipe["mFuelClass"]
-        supplement = recipe["mSupplementalResourceClass"]
-        by_product = recipe["mByProduct"]
-        by_product_amount = recipe["mByProductAmount"]
 
-        # TODO: translate material names
-        fuel_load = generator["mFuelLoadAmount"]
-        supplemental_load = generator["mSupplementalLoadAmount"]
-        power_output = generator["mPowerProduction"]
+    material_mapping = {m.internal_name: m for m in get_material_metadata(materials_class)}
 
-        rate = 60 * material_mapping[fuel].energy_amount / power_output
-        ingredients = {fuel: fuel_load}
-        if supplement != "":
-            ingredients[supplement] = supplemental_load
+    def _make_recipe(recipe, generator):
+        fuel = material_mapping[recipe["mFuelClass"]]
+        supplement = material_mapping.get(recipe["mSupplementalResourceClass"])
+        by_product = material_mapping.get(recipe["mByproduct"])
+
+        fuel_load = float(generator["mFuelLoadAmount"])
+        power_output = float(generator["mPowerProduction"])
+
+        if fuel.energy_value == 0:
+            return None
+
+        duration = (fuel.energy_value / power_output) / 60
+        ingredients = {fuel.friendly_name: fuel_load}
+
+        if supplement is not None:
+            supplemental_load = float(generator["mSupplementalLoadAmount"])
+            ingredients[supplement.friendly_name] = supplemental_load
+
         products = {}
-        if by_product != "":
-            products[by_product] = by_product_amount
+        if by_product is not None:
+            by_product_amount = float(recipe["mByproductAmount"])
+            products[by_product.friendly_name] = by_product_amount
 
-        return Recipe(material_class(**ingredients), material_class(**products)) * rate
+        return Recipe(f"{fuel.friendly_name}_power", materials_class(**ingredients),
+                      materials_class(**products), duration=duration)
 
     recipes = CategorizedCollection()
 
     # FIXME: _values_for_key_list is in a bad spot for importing
-    for generator in _values_for_key_list(GENERATOR_KEYS):
+    for generator in _values_for_key_list(simple_config, GENERATOR_KEYS):
+        generator_name = standardize(generator["mDisplayName"])
+
+        if "mFuel" not in generator:
+            # geothermal generator
+            continue
+
         for recipe in generator["mFuel"]:
             if recipe["mFuelClass"] in simple_config:
                 recipe = copy(recipe)
                 for fuel_type in simple_config[recipe["mFuelClass"]]:
-                    recipe["mFuelClass"] = fuel_type["ClassName"]
+                    fuel_name = material_mapping[fuel_type].friendly_name
+                    recipe["mFuelClass"] = material_mapping[fuel_type].internal_name
 
-                    # TODO
-                    recipes["TODO"] = _make_recipe(recipe, generator)
+                    if power_recipe := _make_recipe(recipe, generator) is not None:
+                        recipes[f"{generator_name}_{fuel_name}"] = power_recipe
 
-            recipes["TODO"] = _make_recipe(recipe)
+            fuel_name = material_mapping[recipe["mFuelClass"]].friendly_name
+
+            if power_recipe := _make_recipe(recipe, generator) is not None:
+                recipes[f"{generator_name}_{fuel_name}"] = power_recipe
 
     return recipes
