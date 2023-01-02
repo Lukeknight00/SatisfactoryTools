@@ -1,3 +1,4 @@
+from categorized_collection import CategorizedCollection
 from material import MaterialSpec
 from recipe import Recipe
 
@@ -6,8 +7,8 @@ class Machine:
     input_producers: dict["Machine", str]
     output_consumers: dict["Machine", str]
 
-    power_consumption: float
-    power_production: float
+    power_consumption: float = 0
+    power_production: float = 0
 
     def __init__(self, recipe: Recipe):
         self.input_producers = {}

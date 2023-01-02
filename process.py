@@ -1,4 +1,5 @@
 from collections import deque
+from dataclasses import fields
 
 import numpy as np
 from scipy.optimize import linprog
@@ -8,10 +9,11 @@ from material import MaterialSpec
 from recipe import Recipe
 
 
+def dataclass_to_list(dc):
+    return [getattr(dc, f.name) for f in fields(dc)]
+
+
 class Process:
-    """
-    TODO: power
-    """
     scale: int
     power: float = 0
     process_root: Machine
@@ -38,7 +40,7 @@ class Process:
         TODO: co-optimize generation, use less than constraint, multiple gen/load by -1 to ensure excess consumption
         TODO: allow surplos
         """
-        output = Machine(Recipe("output", target_output, target_output))
+        output = Machine(Recipe("output", target_output, target_output, duration=1))
         nodes = deque([output])
         visited = set()
         registry = {}

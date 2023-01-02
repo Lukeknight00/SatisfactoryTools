@@ -12,11 +12,16 @@ class CategorizedCollection:
     """
     _values: dict
     _tags: dict
+    _inverse_tags: dict
 
     def __init__(self, items: dict[T, S] = None, tags: dict[str, set[T]] = None):
-        self._tags = defaultdict(list)
+        self._tags = defaultdict(set)
+        self._inverse_tags = defaultdict(set)
         if tags is not None:
             self._tags.update(tags)
+            for tag, values in tags.items():
+                for v in values:
+                    self._inverse_tags[v].add(tag)
 
         self._values = items or {}
 
@@ -30,13 +35,15 @@ class CategorizedCollection:
         yield from self._values.values()
 
     def update(self, other: "Self"):
-        self._values.update(dict(other.items))
+        self._values.update(dict(other.items()))
 
-        for tag in other.tags:
-            self._tags[tag] = self.tag[tag] | other.tag[tag]
+        for tag, values in other.tags.items():
+            for v in values:
+                self.set_tag(v, tag)
 
     def set_tag(self, item, tag):
-        self._tags[tag].append(item)
+        self._tags[tag].add(item)
+        self._inverse_tags[item].add(tag)
 
     def __getitem__(self, item):
         return self._values[item]
@@ -46,8 +53,16 @@ class CategorizedCollection:
 
     @property
     def tags(self):
-        return self._tags.keys()
+        return self._tags
 
-    @property
-    def tag(self):
-        return lambda tag: set(self._values[key] for key in self._tags[tag])
+    def tag(self, tag):
+        value_keys = self._tags[tag]
+        inverse_tags = {v: self._inverse_tags[v] for v in value_keys}
+        tags_dict = defaultdict(set)
+        for k, value_set in inverse_tags.items():
+            for v in value_set:
+                tags_dict[v].add(k)
+
+        values_dict = {k: self._values[k] for k in value_keys}
+
+        return type(self)(values_dict, tags_dict)
