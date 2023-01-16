@@ -1,6 +1,7 @@
-from dataclasses import fields
+from dataclasses import fields, dataclass
 
 
+@dataclass
 class MaterialSpec:
     def __add__(self, other):
         if not isinstance(other, type(self)):

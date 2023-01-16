@@ -1,5 +1,7 @@
 from textwrap import dedent
 
+import plotly.graph_objects as go
+
 from process import Process
 
 
@@ -32,9 +34,9 @@ def recipe_summary(process: Process):
                          "<br>".join([f"{name}: {value * process.scale:.2f}" for name, value in process.process_root.recipe.products if value > 0]),
                          ])
 
+    # transpose row to column major order
+    go.Table(header=dict(values=headers), cells=dict(values=list(map(list, zip(*rows)))))
+
     return make_table(headers, rows)
 
 
-def total_power(process: Process):
-    total =  sum(p.scale * p.process_root.power_consumption for p in filter(lambda p: p.scale > 0, process.process_registry.values()))
-    print(f"Total Power: {total}")

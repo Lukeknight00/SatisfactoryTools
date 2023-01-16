@@ -26,7 +26,8 @@ class Process:
         self.input_materials = process_root.recipe.ingredients * scale
         self.output_materials = process_root.recipe.products * scale
 
-        # TODO: this is terrible
+        # TODO: this is terrible. Now that recursion isn't happening in __new__, a ProcessNode and
+        # TODO: ProcessRegistry setup may be cleaner
         self.process_registry = registry
         registry[process_root] = self
 
@@ -69,6 +70,9 @@ class Process:
             solution = linprog(c=costs, A_eq=material_constraints, b_eq=output_equals, A_ub=A_ub, b_ub=b_ub)
         else:
             solution = linprog(c=costs, A_eq=material_constraints, b_eq=output_equals)
+
+        if solution.x is None:
+            raise RuntimeError(solution)
 
         for m, s in zip(visited, solution.x.round(4)):
             cls(m, registry, s)

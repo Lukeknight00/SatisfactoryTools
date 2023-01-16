@@ -51,9 +51,15 @@ class CategorizedCollection:
     def __setitem__(self, key, value):
         self._values[key] = value
 
+    def __contains__(self, item):
+        return item in self._values
+
     @property
     def tags(self):
         return self._tags
+
+    def value_tags(self, tag):
+        return self._inverse_tags[tag]
 
     def tag(self, tag):
         value_keys = self._tags[tag]

@@ -1,4 +1,3 @@
-from categorized_collection import CategorizedCollection
 from material import MaterialSpec
 from recipe import Recipe
 

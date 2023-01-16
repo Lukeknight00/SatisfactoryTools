@@ -30,7 +30,7 @@ GENERATOR_KEYS = [
 # TODO: isn't variable based on fuel
 
 
-def parse_recipes(simple_config: dict, material_class: MaterialSpec) -> CategorizedCollection:
+def parse_recipes(simple_config: dict, material_class: MaterialSpec, machines: dict) -> CategorizedCollection:
     recipes = CategorizedCollection()
 
     recipes.update(_parse_normal_recipes(simple_config, material_class))
