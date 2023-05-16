@@ -15,7 +15,6 @@ def make_hover_label(process: Process):
     """)
 
 
-# TODO: show machine types in legend
 def plot_process(process: Process, layout=Graph.layout_auto):
     ordered_vertices = [m for m in process.process_registry.values() if m.scale > 0]
     n_vertices = len(ordered_vertices)
@@ -51,8 +50,16 @@ def plot_process(process: Process, layout=Graph.layout_auto):
 
     )
 
-    fig.add_trace(go.Scatter(x=Xn,
-                             y=Yn,
+    machine_types = set(type(m) for m in process.process_registry.values())
+
+    # TODO: add one trace per category
+    for machine_type in machine_types:
+        # TODO: looping over all of them every time is pretty rough
+        indices = [i for i, m in process.process_registry.values() if isinstance(m, machine_type)]
+        X = [Xn[i] for i in indices]
+        Y = [Yn[i] for i in indices]
+        fig.add_trace(go.Scatter(x=X,
+                             y=Y,
                              mode='markers',
                              marker=dict(symbol='circle-dot',
                                          size=point_sizes,
@@ -60,24 +67,26 @@ def plot_process(process: Process, layout=Graph.layout_auto):
                                          ),
                              text=[make_hover_label(v) for v in ordered_vertices],
                              hovertemplate="%{text}<extra></extra>",
+                             # TODO: show machine types in legend
                              showlegend=False,
                              )
                   )
 
-    # TODO: better sizing
+    # TODO: better sizing, theming
     fig.update_layout(
         autosize=True,
-        xaxis= {
-            'showgrid': False, # thin lines in the background
-            'zeroline': False, # thick line at x=0
+        xaxis={
+            'showgrid': False,  # thin lines in the background
+            'zeroline': False,  # thick line at x=0
             'visible': False,  # numbers below
         },
-        yaxis= {
-            'showgrid': False, # thin lines in the background
-            'zeroline': False, # thick line at x=0
+        yaxis={
+            'showgrid': False,  # thin lines in the background
+            'zeroline': False,  # thick line at x=0
             'visible': False,  # numbers below
         },
         height=1000
     )
 
-    fig.show()
+    return fig
+

@@ -1,11 +1,11 @@
 from collections import defaultdict
-from typing import ParamSpec
+from typing import ParamSpec, Generic
 
 T = ParamSpec("T")
 S = ParamSpec("S")
 
 
-class CategorizedCollection:
+class CategorizedCollection(Generic[T, S]):
     """
     Class  that stores a dictionary and categories for each of its items. This allows
     access to items directly, as well as by category.

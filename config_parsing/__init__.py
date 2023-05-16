@@ -32,8 +32,7 @@ class RecipeData:
 
 @dataclass
 class Config:
-    # CategorizedCollection[str, RecipeData]
-    recipes: CategorizedCollection
+    recipes: CategorizedCollection[str, RecipeData]
     materials: MaterialSpec
 
 
@@ -50,7 +49,7 @@ def parse_config(config_path: str, encoding="utf-16"):
 
 def _make_recipe_data(recipes: CategorizedCollection, machines: dict) -> CategorizedCollection:
     """
-    expects recipes to be tagged with the machine keys that they can be constructed by
+    expects recipes to be tagged with the machine keys that they can be constructed by.
     """
     recipe_data = CategorizedCollection()
      # TODO: there are some shortcomings with this CategorizedCollection and managing tags
