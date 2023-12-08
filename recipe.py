@@ -10,6 +10,13 @@ class Recipe:
     duration: float
     variable_power_modifier: float
 
+    # TODO
+    power_consumption: float = 0
+    power_production: float = 0
+
+    # TODO
+    machine_type: str
+
     def __init__(self, name: str, ingredients: MaterialSpec, products: MaterialSpec, duration: float, power_modifier: float = 0):
         # FIXME: add div to MaterialSpec
         self.ingredients = ingredients * (1 / duration)
@@ -45,4 +52,27 @@ class Recipe:
 
         return f"{ingredients} >> {products}"
 
+    def __rshift__(self, material_spec: MaterialSpec) -> MaterialSpec:
+        """
+        Solve for inputs
+        Recipe >> MaterialSpec
+        """
+        # TODO: what should the inverse of div be?
+        scale = max(getattr(material_spec, name) / value for name, value in self.products if value > 0)
+        scaled = self * scale
+        return material_spec - scaled
 
+    def __lshift__(self, material_spec: MaterialSpec) -> MaterialSpec:
+        """
+        Solve for outputs
+        Recipe << MaterialSpec
+        """
+        scale = material_spec / self
+        scaled = self * scale
+        return material_spec + scaled
+
+    def has_input(self, material: str) -> bool:
+        return getattr(self.ingredients, material) > 0
+
+    def has_output(self, material: str) -> bool:
+        return getattr(self.products, material) > 0

@@ -4,23 +4,23 @@ from categorized_collection import CategorizedCollection
 from config_parsing.standardization import standardize
 from machine import Machine
 
-BUILDABLE_KEYS = [
+BUILDABLE_KEYS = (
     # assembler, constructor, blender, oilrefinery, foundry, smelter, manufacturer
     "FGBuildableManufacturer",
     # collider
     "FGBuildableManufacturerVariablePower",
-]
+)
 
-EXTRACTOR_KEYS = [
+EXTRACTOR_KEYS = (
     "FGBuildableResourceExtractor",
     "FGBuildableWaterPump"
-]
+)
 
-GENERATOR_KEYS = [
+GENERATOR_KEYS = (
     "FGBuildableGeneratorFuel",
     "FGBuildableGeneratorNuclear",
     "FGBuildableGeneratorGeoThermal"
-]
+)
 
 
 def _values_for_key_list(simple_config: dict, key_list: list):

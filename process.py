@@ -39,7 +39,7 @@ class Process:
         Builds a process tree from a list of machines
 
         TODO: co-optimize generation, use less than constraint, multiple gen/load by -1 to ensure excess consumption
-        TODO: allow surplos
+        TODO: allow surplus
         """
         output = Machine(Recipe("output", target_output, target_output, duration=1))
         nodes = deque([output])

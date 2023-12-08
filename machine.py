@@ -3,6 +3,7 @@ from recipe import Recipe
 
 
 class Machine:
+    # TODO: deprecate
     input_producers: dict["Machine", str]
     output_consumers: dict["Machine", str]
 
