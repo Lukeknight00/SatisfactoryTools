@@ -96,12 +96,13 @@ def optimize_outputs_widget(callback, target_output, recipes, generation=False):
         button.description = "Working"
         machines = [r.instance() for r in recipes.values()]
 
-        try:
-            callback(Process.from_outputs(target_output, machines, include_power=generation))
-        finally:
-            button.button_style = ""
-            button.description = old_text
-            button.disabled = False
+   
+        callback(Process.from_outputs(target_output, machines, include_power=generation))
+
+        # finally:
+        #     button.button_style = ""
+        #     button.description = old_text
+        #     button.disabled = False
 
     button.on_click(optimize)
     return button

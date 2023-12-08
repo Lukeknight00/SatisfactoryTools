@@ -89,7 +89,7 @@ class Process:
               problem, however, the optimizer will ignore extractors since consuming materials directly is equivalent.
               FIXME: this can be addressed by adding an additional constraint on producers/extractors. May be trick for intermediate products
         """
-        inputs = Machine(Recipe("input", available_materials, available_materials))
+        inputs = Machine(Recipe("input", available_materials, available_materials, duration=1))
         nodes = deque([inputs])
         visited = set()
         registry = {}

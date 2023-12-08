@@ -36,6 +36,7 @@ def get_material_metadata(material_spec: Type["Materials"]) -> list[MaterialMeta
 
 def parse_materials(simple_config: dict) -> Type["Materials"]:
     fields = []
+    breakpoint()
     for internal_name, item in itertools.chain.from_iterable((simple_config[key].items() for key in RESOURCE_KEYS)):
         name = standardize(item["mDisplayName"])
         material_type = MaterialType(item["mForm"])

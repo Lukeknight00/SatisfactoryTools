@@ -15,6 +15,7 @@ from recipe import Recipe
 def simplify_config(game_config: dict) -> dict:
     simple_config = {}
     native_class_pattern = r".*\.(\w+)'?"
+    breakpoint()
     for config in game_config:
         key = re.match(native_class_pattern, config["NativeClass"]).group(1)
         simple_config[key] = {item["ClassName"]: item for item in config["Classes"]}
@@ -34,6 +35,7 @@ class RecipeData:
 class Config:
     recipes: CategorizedCollection[str, RecipeData]
     materials: MaterialSpec
+    machines: dict
 
 
 def parse_config(config_path: str, encoding="utf-16"):
@@ -44,7 +46,7 @@ def parse_config(config_path: str, encoding="utf-16"):
         recipes = parse_recipes(config_data, materials, machines)
         recipes = _make_recipe_data(recipes, machines)
 
-    return Config(materials=materials, recipes=recipes)
+    return Config(materials=materials, recipes=recipes, machines=machines)
 
 
 def _make_recipe_data(recipes: CategorizedCollection, machines: dict) -> CategorizedCollection:

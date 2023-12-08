@@ -43,7 +43,7 @@ def parse_recipes(simple_config: dict, material_class: MaterialSpec, machines: d
 
 
 def _parse_normal_recipes(simple_config: dict, materials_class: type[MaterialSpec]):
-    resource_capture_group = r".*?\.(\w+).*?"
+    resource_capture_group = r".*\.(\w+).*?"
     ingredients_pattern = rf"\(ItemClass={resource_capture_group},Amount=(\d+)\)"
     recipes = CategorizedCollection()
 
@@ -67,6 +67,8 @@ def _parse_normal_recipes(simple_config: dict, materials_class: type[MaterialSpe
         except KeyError:
             # we don't have the resources in the material_mapping--indicates a non-automated
             # recipe. TODO: have a better detection mechanism for this
+            breakpoint()
+
             continue
 
         duration = float(config["mManufactoringDuration"]) / 60  # seconds to minutes
@@ -90,7 +92,7 @@ def _parse_extractor_recipes(simple_config: dict, materials_class: type[Material
     recipes = CategorizedCollection()
     material_mapping = {m.internal_name: m for m in get_material_metadata(materials_class)}
 
-    particle_map_pattern = r"\(ResourceNode.*?=.*?\.(\w+),ParticleSystem.*?\)"
+    particle_map_pattern = r"\(ResourceNode.*?=.*?\.(\w+).*?,ParticleSystem.*?\)"
 
     for key in EXTRACTOR_KEYS:
         for extractor in simple_config[key].values():
