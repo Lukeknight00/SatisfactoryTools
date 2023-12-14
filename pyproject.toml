@@ -1,0 +1,51 @@
+[build-system]
+requires = ["flit_core>=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "satisfactory-tools"
+version = "0.8.0"
+requires-python = ">=3.11"
+description = "Planning and Plotting tools for satisfactory update 8"
+dependencies = [
+  "ipytree",
+  "ipywidgets",
+  "numpy",
+  "plotly",
+  "python_igraph",
+  "scipy",
+  "typing_extensions"
+]
+
+[tool.mypy]
+plugins = [
+  "pydantic.mypy"
+]
+allow_redefinition = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+# disallow_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.ruff]
+line-length = 100
+
+# "ANN", "PT", "S", "DTZ", "FBT", "TCH", "D"
+select = ["E", "F", "W", "C90", "N", "YTT", "B",
+          "C4", "A", "G", "INP", "PYI", "RET",
+          "SLF", "SIM", "ARG", "PTH", "PD", "PL",
+          "PLE", "PLR", "PLW", "TRY", "PERF", "PGH",
+          "ICN", "PIE", "TID", "RUF", "I"]
+fixable = ["ICN", "PIE", "TID", "RUF", "I", "F401"]
+ignore = ["A003", "TRY003", "PTH123", "PERF401", "PERF203"]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+target-version = "py311"
+fix = true
+show-fixes = true
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.pylint]
+max-args=8

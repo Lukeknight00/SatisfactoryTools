@@ -1,67 +1,69 @@
 from collections import defaultdict
-from typing import ParamSpec, Generic
+from typing import TypeVar, Generic, Iterable
+from typing_extensions import Self
 
-T = ParamSpec("T")
-S = ParamSpec("S")
+K = TypeVar("K")
+V = TypeVar("V")
 
 
-class CategorizedCollection(Generic[T, S]):
+class CategorizedCollection(Generic[K, V]):
     """
     Class  that stores a dictionary and categories for each of its items. This allows
     access to items directly, as well as by category.
     """
-    _values: dict
-    _tags: dict
-    _inverse_tags: dict
+    _values: dict[K, V]
+    # tags maps tags to keys, inverse maps keys to tags
+    _tags: dict[str, set[K]]
+    _inverse_tags: dict[K, set[str]]
 
-    def __init__(self, items: dict[T, S] = None, tags: dict[str, set[T]] = None):
+    def __init__(self, items: dict[K, V] | None = None, tags: dict[str, set[K]] | None = None):
         self._tags = defaultdict(set)
         self._inverse_tags = defaultdict(set)
         if tags is not None:
             self._tags.update(tags)
-            for tag, values in tags.items():
-                for v in values:
-                    self._inverse_tags[v].add(tag)
+            for tag, keys in tags.items():
+                for key in keys:
+                    self._inverse_tags[key].add(tag)
 
         self._values = items or {}
 
-    def keys(self):
+    def keys(self) -> Iterable[K]:
         yield from self._values.keys()
 
-    def items(self):
+    def items(self) -> Iterable[tuple[K, V]]:
         yield from self._values.items()
 
-    def values(self):
+    def values(self) -> Iterable[V]:
         yield from self._values.values()
 
-    def update(self, other: "Self"):
+    def update(self, other: Self) -> None:
         self._values.update(dict(other.items()))
 
-        for tag, values in other.tags.items():
-            for v in values:
-                self.set_tag(v, tag)
+        for tag, keys in other.tags.items():
+            for key in keys:
+                self.set_tag(key, tag)
 
-    def set_tag(self, item, tag):
-        self._tags[tag].add(item)
-        self._inverse_tags[item].add(tag)
+    def set_tag(self, key: K, tag: str) -> None:
+        self._tags[tag].add(key)
+        self._inverse_tags[key].add(tag)
 
-    def __getitem__(self, item):
-        return self._values[item]
+    def __getitem__(self, key: K) -> V:
+        return self._values[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: K, value: V) -> None:
         self._values[key] = value
 
-    def __contains__(self, item):
-        return item in self._values
+    def __contains__(self, key: K) -> bool:
+        return key in self._values
 
     @property
-    def tags(self):
+    def tags(self) -> dict[str, set[K]]:
         return self._tags
 
-    def value_tags(self, tag):
-        return self._inverse_tags[tag]
+    def value_tags(self, key: K) -> set[str]:
+        return self._inverse_tags[key]
 
-    def tag(self, tag):
+    def tag(self, tag: str) -> Self:
         value_keys = self._tags[tag]
         inverse_tags = {v: self._inverse_tags[v] for v in value_keys}
         tags_dict = defaultdict(set)

@@ -15,10 +15,11 @@ from recipe import Recipe
 def simplify_config(game_config: dict) -> dict:
     simple_config = {}
     native_class_pattern = r".*\.(\w+)'?"
-    breakpoint()
+
     for config in game_config:
         key = re.match(native_class_pattern, config["NativeClass"]).group(1)
         simple_config[key] = {item["ClassName"]: item for item in config["Classes"]}
+
     return simple_config
 
 
