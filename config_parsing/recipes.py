@@ -18,6 +18,7 @@ class RecipeData(ConfigData):
     outputs: dict[str, float]
     duration: float
     machines: set[str]
+    # TODO: power modifiers
 
 
 def parse_recipes(simple_config: dict[str, ...]) -> list[RecipeData]:

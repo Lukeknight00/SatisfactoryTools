@@ -102,7 +102,6 @@ def _parse_extractor(extractor_config: dict[str, ...]) -> ExtractorData:
     )
 
 
-
 def _parse_generator(generator_config: dict[str, ...]) -> GeneratorData:
     # TODO: this is a class of fuels, rather than a fuel itself
     fuel_class = generator_config["mFuelClass"]

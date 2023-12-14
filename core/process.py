@@ -1,4 +1,5 @@
-from collections import deque, Counter
+from collections import deque, Counter, defaultdict
+import networkx as nx
 from dataclasses import fields, dataclass
 from typing_extensions import Self
 from typing import overload, Any
@@ -7,10 +8,6 @@ from functools import singledispatch
 
 import numpy as np
 from scipy.optimize import linprog
-
-# Deprecated
-from core.machine import Machine
-from core.recipe import Recipe
 
 from core.material import MaterialSpec
 
@@ -23,7 +20,8 @@ class ProcessNode:
     name: str  # TODO: use an enum of node types, rather than names, to make plotting easier
     input_materials: MaterialSpec
     output_materials: MaterialSpec
-    power: float
+    power_production: float
+    power_consumption: float
 
     def __repr__(self) -> str:
         ingredients = " ".join(repr(self.input_materials).splitlines())
@@ -67,14 +65,14 @@ class ProcessNode:
     def __rrshift__(self, other: "ProcessNode" | MaterialSpec | Any) -> "ProcessNode" | MaterialSpec:
         """
         Solve for inputs or join process nodes
-        MaterialSpec << Recipe
+        other >> self 
         """
         return self << other 
 
-    def __llshift__(self, other: "ProcessNode" | MaterialSpec | Any) -> "ProcessNode" | MaterialSpec:
+    def __rlshift__(self, other: "ProcessNode" | MaterialSpec | Any) -> "ProcessNode" | MaterialSpec:
         """
         Solve for outputs
-        MaterialSpec >> Recipe
+        other << self
         """
         return self >> other 
 
@@ -82,13 +80,7 @@ class ProcessNode:
         """
         Scale up this recipe
         """
-        return type(self)(self.name, self.ingredients * scalar, self.products * scalar)
-
-    def __rtruediv__(self, material_spec: MaterialSpec) -> Number:
-        """
-        Get the number of iterations of this recipe that can be produced from the given material_spec
-        """
-        return self.input_materials / material_spec
+        return type(self)(self.name, self.input_materials * scalar, self.output_materials * scalar, self.power_production * scalar, self.power_consumption * scalar)
 
     def has_input(self, material: str) -> bool:
         return getattr(self.input_materials, material) > 0
@@ -107,6 +99,7 @@ class CompositeProcessNode(ProcessNode):
     nodes: set[ProcessNode]
 
     def __init__(self, *nodes: ProcessNode) -> None:
+        # TODO: make empty materials
         sum_inputs = sum(node.input_materials for node in nodes)
         sum_outputs = sum(node.output_materials for node in nodes)
 
@@ -119,126 +112,99 @@ class CompositeProcessNode(ProcessNode):
         super().__init__(input_materials=net_inputs, output_materials=net_outputs, power=power)
 
 
-class ProcessOptimization:
+class Process(CompositeProcessNode):
     """
     Store graph as adjacency matrix, no real value in adjacency list here because optimization runs on the full graph
     rather than traversal. This also saves us from the issue of binding a ProcessNodes to Optimization instances
     1:1, since it may be useful to re-use the same CompositeProcessNode, representing a factory, in multiple
     different contexts or optimizations. Representing the graph this way saves us from needing an additional
     intermediate class or modifying nodes.
+
+    # TODO: save solution to Process
     """
 
+    def __init__(self, process_graph: nx.Multigraph) -> None:
+        # TODO: create duing init, requires ability to add source/sink nodes in optimization
+        self.graph = process_graph
+
     @classmethod
-    def from_outputs(cls, target_output: MaterialSpec, machines: list[ProcessNode], include_power=False):
+    def _filter_eligible_nodes(cls, output_node: ProcessNode, available_nodes: list[ProcessNode]) -> list[ProcessNode]:
+        graph = cls._make_graph([output_node] + available_nodes)
+        return graph.ancestors(output_node)
+
+    @staticmethod
+    def _make_graph(nodes: list[ProcessNode]) -> nx.Multigraph:
+        graph = nx.Multigraph()
+        graph.add_nodes_from(nodes)
+
+        for i, node_1 in enumerate(nodes):
+            for node_2 in nodes[i:]:
+                # TODO: add all materials as attributes to node
+                # TODO: add scale attribute to node
+                # TODO: add cost attribute to node
+                if any(v for _, v in node_1.input_materials | node_2.output_materials):
+                    graph.add_edge(node_1, node_2)
+                if any(v for _, v in node_2.input_materials | node_1.output_materials):
+                    graph.add_edge(node_2, node_1)
+
+        return graph
+
+
+    @classmethod
+    def minimize_input(cls, target_output: MaterialSpec, process_nodes: list[ProcessNode],include_power=False):
         """
-        Builds a process tree from a list of machines
+        Find the weights on process nodes that produce the desired output with the least input and
+        process cost.
 
-        TODO: co-optimize generation, use less than constraint, multiple gen/load by -1 to ensure excess consumption
-        TODO: allow surplos
+        TODO: allow surplus
         """
-        output = Machine(Recipe("output", target_output, target_output, duration=1))
-        nodes = deque([output])
-        visited = set()
-        registry = {}
+        output = ProcessNode("Output", target_output, target_output, 0, 0)
 
-        # collect possible nodes in tree
-        while len(nodes):
-            current_node = nodes.popleft()
-            visited.add(current_node)
+        connected_nodes = cls._filter_eligible_nodes(output, process_nodes + [output])
+        costs = [1 for _ in connected_nodes]  # TODO: cost per recipe
+        output_lower_bound = np.array(dataclass_to_list(target_output))
 
-            for machine in machines:
-                for ingredient in current_node.ingredients():
-                    if machine.has_output(ingredient):
-                        if machine not in visited:
-                            nodes.append(machine)
-
-        visited = list(visited)
-        costs = [1 for _ in visited]  # TODO: pre-process cost per recipe
-        output_equals = dataclass_to_list(target_output)
-
+        # matrix where each machine is a column and each material is a row
         material_constraints = np.array(
-            [dataclass_to_list(m.recipe.products - m.recipe.ingredients) for m in visited]).T
+            [dataclass_to_list(node.output_materials - node.input_materials) + ([node.power_consumption - node.power_production] if include_power else []) for node in connected_nodes]).T
 
-        if include_power:
-            A_ub = [m.power_consumption - m.power_production for m in visited]
-            b_ub = [0]
-            solution = linprog(c=costs, A_eq=material_constraints, b_eq=output_equals, A_ub=A_ub, b_ub=b_ub)
-        else:
-            solution = linprog(c=costs, A_eq=material_constraints, b_eq=output_equals)
+        # use -1 factor to convert problem of materials * coeefficients >= outputs to minimization
+        # production >= target
+        bounds = (0, None)
+        solution = linprog(c=costs, A_ub=material_constraints * -1, b_ub=output_lower_bound * -1, bounds = bounds)
 
-        if solution.x is None:
-            raise RuntimeError(solution)
-
-        for m, s in zip(visited, solution.x.round(4)):
-            cls(m, registry, s)
-
-        cls(output, registry, 1)
-
-        return registry[output]
+        # temporary during testing
+        return solution
 
     @classmethod
-    def from_inputs(cls, available_materials: MaterialSpec, target_output: MaterialSpec, process_nodes: list[ProcessNode], include_power=False):
+    def maximize_output(cls, available_materials: MaterialSpec, target_output: MaterialSpec, process_nodes: list[ProcessNode], include_power=False):
         """
-        NOTE: if extractors are passed in here, this optimization is unbounded, since extractors are currently modelled as requiring no resources
-              to output their expected output. This may be why extractors in the config have a balanced in and output rate. In the case of this
-              problem, however, the optimizer will ignore extractors since consuming materials directly is equivalent.
-              FIXME: this can be addressed by adding an additional constraint on producers/extractors. May be trick for intermediate products
+        Maximize production of output materials where input materials are constrained. If extractors
+        are allowed, problem may be unbounded due to unlimited material supply. This may be addressed
+        by future work that constrains extractors by total available supply or changes how extractor
+        cost is modelled.
         """
-        inputs = Machine(Recipe("input", available_materials, available_materials, duration=1))
-        nodes = deque([inputs])
-        visited = set()
-        registry = {}
+        output = ProcessNode("Output", target_output, target_output, 0, 0)
 
-        # collect possible nodes in tree
-        while len(nodes):
-            current_node = nodes.popleft()
-            visited.add(current_node)
-            for machine in machines:
-                for product in current_node.products():
-                    # TODO: this works, for unknown reasons. Without this, solution includes extraneous recipes, seemingly
-                    # to balance consumption
-                    if machine.has_input(product):
-                        if machine not in visited:
-                            nodes.append(machine)
+        visited = cls._filter_eligible_nodes(output, process_nodes + [output])
 
-        visited = list(visited)
+        # small penalty for using machines, to avoid creating redundant loops, reward for producing
+        # more output
+        costs = [-1 if node is output else .0001 for node in visited]  # TODO: cost per recipe
 
-        # FIXME: this setup of getattrs/weird loop order is heinous, even by the standards of this project
-        costs = np.array([*[sum(
-            (getattr(target_output, mat) > 0) * getattr(m.recipe.ingredients - m.recipe.products, mat) for mat in
-            [*m.products(), *m.ingredients()]) for m in visited], *[.001 for _ in visited]])
+        # matrix where each machine is a column and each material is a row
+        material_constraints = np.array(
+            [dataclass_to_list(node.output_materials - node.input_materials) for node in visited]).T
 
-        connect_eq_constraints = [
-            [(j == i % len(visited)) * (1 - 2 * (i // len(visited))) for i, _ in enumerate([*visited, *visited])] for
-            j, _ in enumerate(visited)]
-        connect_eq_bounds = [0 for _ in range(len(visited))]
+        material_consumption_upper_bound = dataclass_to_list(available_materials)
 
-        production_matrix = np.array([dataclass_to_list(m.recipe.ingredients - m.recipe.products) for m in visited]).T
-        production_matrix = np.concatenate((production_matrix, np.zeros_like(production_matrix)), axis=1)
+        # consumption <= available
+        # byproducts >= 0
+        bounds = (0, None)
 
-        production_amounts = dataclass_to_list(target_output)
-        production_indices, *_ = np.nonzero(production_amounts)
+        solution = linprog(c=costs,
+                           A_ub=material_constraints,
+                           b_ub=material_consumption_upper_bound)
 
-        for mat_1_idx, mat_2_idx in zip(production_indices[:-1], production_indices[1:]):
-            ratio = production_amounts[mat_1_idx] / production_amounts[mat_2_idx]
-            connect_eq_constraints.append(
-                -1 * production_matrix[mat_1_idx, :] + ratio * production_matrix[mat_2_idx, :])
-            connect_eq_bounds.append(0)
-
-        connect_eq_constraints = np.array(connect_eq_constraints)
-        connect_eq_bounds = np.array(connect_eq_bounds)
-
-        # make products hove positive value, require consumption to be <= available
-        output_bounds = np.array([*[material - .001 * (i in production_indices) for i, material in
-                                    enumerate(dataclass_to_list(available_materials))]])
-
-        solution = linprog(c=costs, A_ub=production_matrix, b_ub=output_bounds, A_eq=connect_eq_constraints,
-                           b_eq=connect_eq_bounds)
-
-        for m, s in zip(visited, solution.x.round(4)):
-            cls(m, registry, s)
-
-        cls(inputs, registry, 1)
-
-        return registry[inputs]
-
+        # temporary during testing
+        return solution

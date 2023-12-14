@@ -8,6 +8,10 @@ from functools import singledispatch
 class MaterialSpec:
     # TODO: make this an attr accessible default dict, rather than dynamic dataclass
 
+    @classmethod
+    def empty(cls) -> MaterialSpec:
+        return cls()
+
     def __lt__(self, other: Number) -> "MaterialSpec":
         """
         Return a MaterialSpec where values less than the given number are kept and remaining values set to

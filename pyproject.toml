@@ -12,7 +12,7 @@ dependencies = [
   "ipywidgets",
   "numpy",
   "plotly",
-  "python_igraph",
+  "networkx",
   "scipy",
   "typing_extensions"
 ]
