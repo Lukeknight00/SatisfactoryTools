@@ -44,8 +44,7 @@ def parse_config(config_path: str, encoding="utf-16"):
         config_data = simplify_config(json.loads(f.read()))
         materials = parse_materials(config_data)
         machines = parse_machines(config_data)
-        recipes = parse_recipes(config_data, materials, machines)
-        recipes = _make_recipe_data(recipes, machines)
+        recipes = parse_recipes(config_data)
 
     return Config(materials=materials, recipes=recipes, machines=machines)
 
