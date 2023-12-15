@@ -136,7 +136,7 @@ class Process(CompositeProcessNode):
     @classmethod
     def _filter_eligible_nodes(cls, output_node: ProcessNode, available_nodes: list[ProcessNode]) -> list[ProcessNode]:
         graph = cls._make_graph([output_node] + available_nodes)
-        return nx.ancestors(graph, output_node)
+        return nx.ancestors(graph, output_node) | {output_node}
 
     @staticmethod
     def _make_graph(nodes: list[ProcessNode]) -> nx.MultiGraph:
@@ -160,8 +160,8 @@ class Process(CompositeProcessNode):
         """
         Find the weights on process nodes that produce the desired output with the least input and
         process cost.
-
-        TODO: allow surplus
+        
+        # TODO: availability constraints
         """
         output = ProcessNode("Output", target_output, target_output, 0, 0)
 
@@ -203,6 +203,10 @@ class Process(CompositeProcessNode):
 
         material_consumption_upper_bound = dataclass_to_list(available_materials)
 
+        # production_rows = np.nonzero(dataclass_to_list(target_output))
+
+        # material_constraints[production_rows] *= -1
+
         # consumption <= available
         # byproducts >= 0
         bounds = (0, None)
@@ -212,4 +216,5 @@ class Process(CompositeProcessNode):
                            b_ub=material_consumption_upper_bound)
 
         # temporary during testing
+        breakpoint()
         return solution
