@@ -1,18 +1,24 @@
 from dataclasses import fields, dataclass
-from typing import Any
+from typing import Any, Union
 from numbers import Number
-from functools import singledispatch
+from functools import singledispatchmethod
+from typing_extensions import Self
 
 
-@dataclass
-class MaterialSpec:
+class _SignalClass:
+    """
+    Used for single dispatch on Self type
+    """
+
+@dataclass(frozen=True)
+class MaterialSpec(_SignalClass):
     # TODO: make this an attr accessible default dict, rather than dynamic dataclass
 
     @classmethod
-    def empty(cls) -> MaterialSpec:
+    def empty(cls) -> Self:
         return cls()
 
-    def __lt__(self, other: Number) -> "MaterialSpec":
+    def __lt__(self, other: Number) -> Self:
         """
         Return a MaterialSpec where values less than the given number are kept and remaining values set to
         their default.
@@ -22,7 +28,7 @@ class MaterialSpec:
             **{name: value for (name, value) in self if value < other}
         )
 
-    def __gt__(self, other: Number) -> "MaterialSpec":
+    def __gt__(self, other: Number) -> Self:
         """
         Return a MaterialSpec where values greater than the given number are kept and remaining values set to
         their default.
@@ -31,8 +37,8 @@ class MaterialSpec:
         return type(self)(
             **{name: value for (name, value) in self if value > other}
         )
-    
-    def __le__(self, other: Number) -> "MaterialSpec":
+
+    def __le__(self, other: Number) -> Self:
         """
         Return a MaterialSpec where values less than or equal to the given number are kept and remaining
         values set to their default.
@@ -42,7 +48,7 @@ class MaterialSpec:
             **{name: value for (name, value) in self if value <= other}
         )
 
-    def __ge__(self, other: Number) -> "MaterialSpec":
+    def __ge__(self, other: Number) -> Self:
         """
         Return a MaterialSpec where values greater than or equal to the given number are kept and remaining
         values set to their default.
@@ -52,7 +58,7 @@ class MaterialSpec:
             **{name: value for (name, value) in self if value >= other}
         )
 
-    def __add__(self, other: "MaterialSpec" | Any) -> "MaterialSpec":
+    def __add__(self, other: Self | Any) -> Self:
         if not isinstance(other, type(self)):
             return NotImplemented
 
@@ -61,7 +67,7 @@ class MaterialSpec:
             result[name] = value + getattr(other, name)
         return type(self)(**result)
 
-    def __sub__(self, other: "MaterialSpec" | Any) -> "MaterialSpec":
+    def __sub__(self, other: Self | Any) -> Self:
         if not isinstance(other, type(self)):
             return NotImplemented
 
@@ -70,48 +76,48 @@ class MaterialSpec:
             result[name] = value - getattr(other, name)
         return type(self)(**result)
 
-    def __mul__(self, scalar: Number) -> "MaterialSpec":
+    def __mul__(self, scalar: Number) -> Self:
         result = {}
         for name, value in self:
             result[name] = value * scalar
         return type(self)(**result)
 
-    @singledispatch
-    def __truediv__(self, other: Any) -> Number | "MaterialSpec":
+    @singledispatchmethod
+    def __truediv__(self, other: Any) -> Number | Self:
         return NotImplemented
 
     @__truediv__.register
-    def _(self, other: Number) -> "MaterialSpec":
+    def _(self, other: Number) -> Self:
         result = {}
         for name, value in self:
             result[name] = value / other 
 
-        return MaterialSpec(**result)
+        return type(self)(**result)
 
-    @__truediv__.register
-    def _(self, other: "MaterialSpec") -> Number:
+    @__truediv__.register(_SignalClass)
+    def _(self, other: Self) -> Number:
         return min(getattr(self, name) / value for name, value in other if value > 0)
 
-    @singledispatch
-    def __div__(self, other: Any) -> int | "MaterialSpec":
+    @singledispatchmethod
+    def __floordiv__(self, other: Any) -> int | Self:
         return NotImplemented
 
-    @__div__.register
-    def _(self, other: "MaterialSpec") -> int:
+    @__floordiv__.register(_SignalClass)
+    def _(self, other: Self) -> int:
         return min(getattr(self, name) // value for name, value in other if value > 0)
 
-    @__div__.register
-    def _(self, other: Number) -> "MaterialSpec":
+    @__floordiv__.register
+    def _(self, other: Number) -> Self:
         result = {}
         for name, value in self:
             result[name] = value // other 
-        return MaterialSpec(**result)
+        return type(self)(**result)
 
     def __iter__(self):
         for f in fields(self):
             yield f.name, getattr(self, f.name)
 
-    def __or__(self, other: "MaterialSpec") -> "MaterialSpec":
+    def __or__(self, other: Self) -> Self:
         if not isinstance(other, MaterialSpec):
             return NotImplemented
 

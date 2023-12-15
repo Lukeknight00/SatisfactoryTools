@@ -2,9 +2,9 @@ from collections import deque, Counter, defaultdict
 import networkx as nx
 from dataclasses import fields, dataclass
 from typing_extensions import Self
-from typing import overload, Any
+from typing import overload, Any, Union
 from numbers import Number
-from functools import singledispatch
+from functools import singledispatchmethod
 
 import numpy as np
 from scipy.optimize import linprog
@@ -14,9 +14,13 @@ from core.material import MaterialSpec
 def dataclass_to_list(dc):
     return [getattr(dc, f.name) for f in fields(dc)]
 
+class _SignalClass:
+    """
+    Used for single dispatch on Self type
+    """
 
-@dataclass
-class ProcessNode:
+@dataclass(frozen=True)
+class ProcessNode(_SignalClass):
     name: str  # TODO: use an enum of node types, rather than names, to make plotting easier
     input_materials: MaterialSpec
     output_materials: MaterialSpec
@@ -29,8 +33,8 @@ class ProcessNode:
 
         return f"{ingredients} >> {products}"
 
-    @singledispatch
-    def __rshift__(self, other: Any) -> CompositeProcessNode | MaterialSpec:
+    @singledispatchmethod
+    def __rshift__(self, other: Any) -> Self | MaterialSpec:
         """
         self >> other
         """
@@ -41,12 +45,12 @@ class ProcessNode:
         scale = other // self.output_materials
         return self.input_materials * scale
 
-    @__rshift__.register
-    def _(self, other: "ProcessNode") -> CompositeProcessNode:
+    @__rshift__.register(_SignalClass)
+    def _(self, other: Self) -> Self:
         return CompositeProcessNode(self, other)
 
-    @singledispatch
-    def __lshift__(self, other: Any) -> CompositeProcessNode | MaterialSpec:
+    @singledispatchmethod
+    def __lshift__(self, other: Any) -> Self | MaterialSpec:
         """
         Solve for outputs or join process nodes
         self << other 
@@ -58,18 +62,18 @@ class ProcessNode:
         scale = self.input_materials // other
         return self.output_materials * scale
 
-    @__lshift__.register
-    def _(self, other: "ProcessNode") -> CompositeProcessNode:
+    @__lshift__.register(_SignalClass)
+    def _(self, other: Self) -> Self:
         return CompositeProcessNode(other, self)
 
-    def __rrshift__(self, other: "ProcessNode" | MaterialSpec | Any) -> "ProcessNode" | MaterialSpec:
+    def __rrshift__(self, other: Self | MaterialSpec | Any) -> Self | MaterialSpec:
         """
         Solve for inputs or join process nodes
         other >> self 
         """
         return self << other 
 
-    def __rlshift__(self, other: "ProcessNode" | MaterialSpec | Any) -> "ProcessNode" | MaterialSpec:
+    def __rlshift__(self, other: Self | MaterialSpec | Any) -> Self | MaterialSpec:
         """
         Solve for outputs
         other << self
@@ -100,16 +104,18 @@ class CompositeProcessNode(ProcessNode):
 
     def __init__(self, *nodes: ProcessNode) -> None:
         # TODO: make empty materials
-        sum_inputs = sum(node.input_materials for node in nodes)
-        sum_outputs = sum(node.output_materials for node in nodes)
+        empty = nodes[0].input_materials.empty()  # FIXME: why
+        sum_inputs = sum((node.input_materials for node in nodes), empty)
+        sum_outputs = sum((node.output_materials for node in nodes), empty)
 
         net_inputs = (sum_inputs - (sum_outputs | sum_inputs)) > 0
         net_outputs = (sum_outputs - (sum_inputs | sum_outputs)) > 0
 
-        power = sum(node.power for node in nodes)
+        power_production = sum(node.power_production for node in nodes)
+        power_consumption = sum(node.power_consumption for node in nodes)
         self.nodes = set(nodes)
 
-        super().__init__(input_materials=net_inputs, output_materials=net_outputs, power=power)
+        super().__init__(name="Composite", input_materials=net_inputs, output_materials=net_outputs,power_production=power_production, power_consumption=power_consumption)
 
 
 class Process(CompositeProcessNode):
@@ -123,7 +129,7 @@ class Process(CompositeProcessNode):
     # TODO: save solution to Process
     """
 
-    def __init__(self, process_graph: nx.Multigraph) -> None:
+    def __init__(self, process_graph: nx.MultiGraph) -> None:
         # TODO: create duing init, requires ability to add source/sink nodes in optimization
         self.graph = process_graph
 
@@ -133,8 +139,8 @@ class Process(CompositeProcessNode):
         return graph.ancestors(output_node)
 
     @staticmethod
-    def _make_graph(nodes: list[ProcessNode]) -> nx.Multigraph:
-        graph = nx.Multigraph()
+    def _make_graph(nodes: list[ProcessNode]) -> nx.MultiGraph:
+        graph = nx.MultiGraph()
         graph.add_nodes_from(nodes)
 
         for i, node_1 in enumerate(nodes):
