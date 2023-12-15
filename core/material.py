@@ -82,6 +82,9 @@ class MaterialSpec(_SignalClass):
             result[name] = value * scalar
         return type(self)(**result)
 
+    def __rmul__(self, scalar: Number) -> Self:
+        return self * scalar 
+
     @singledispatchmethod
     def __truediv__(self, other: Any) -> Number | Self:
         return NotImplemented
