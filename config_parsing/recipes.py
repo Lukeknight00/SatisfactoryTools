@@ -1,11 +1,7 @@
-from copy import copy
-from typing import Iterable
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 
-from categorized_collection import CategorizedCollection
-from config_parsing.machines import _values_for_key_list, EXTRACTOR_KEYS, GENERATOR_KEYS
-from config_parsing.standardization import standardize, get_class_name, ConfigData
+from config_parsing.standardization import ConfigData, get_class_name
 
 RECIPE_KEY = "FGRecipe"
 

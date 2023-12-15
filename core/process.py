@@ -1,15 +1,14 @@
-from collections import deque, Counter, defaultdict
-import networkx as nx
-from dataclasses import fields, dataclass
-from typing_extensions import Self
-from typing import overload, Any, Union
-from numbers import Number
+from dataclasses import dataclass, fields
 from functools import singledispatchmethod
+from typing import Any
 
+import networkx as nx
 import numpy as np
 from scipy.optimize import linprog
+from typing_extensions import Self
 
 from core.material import MaterialSpec
+
 
 def dataclass_to_list(dc):
     return [getattr(dc, f.name) for f in fields(dc)]

@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import TypeVar, Generic, Iterable
+from typing import Generic, Iterable, TypeVar
+
 from typing_extensions import Self
 
 K = TypeVar("K")

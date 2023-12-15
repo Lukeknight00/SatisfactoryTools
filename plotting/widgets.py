@@ -1,14 +1,13 @@
 from collections import defaultdict
 from dataclasses import asdict
-from typing import Type, Mapping, Tuple
+from typing import Mapping, Tuple, Type
 
-from ipywidgets import interactive, Button, dlink
-
-from config_parsing import RecipeData
 from ipytree import Node, Tree
-
+from ipywidgets import Button, dlink, interactive
 from material import MaterialSpec
 from process import Process
+
+from config_parsing import RecipeData
 
 
 class TreeSelectionProxy(Mapping[str, RecipeData]):

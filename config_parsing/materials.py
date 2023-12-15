@@ -1,9 +1,8 @@
 import itertools
-from dataclasses import make_dataclass, field, fields, dataclass
-from enum import Enum, auto
-from typing import Type
+from dataclasses import dataclass, fields
+from enum import Enum
 
-from config_parsing.standardization import standardize, ConfigData
+from config_parsing.standardization import ConfigData
 from core.material import MaterialSpec
 
 RESOURCE_KEYS = ("FGItemDescriptor",

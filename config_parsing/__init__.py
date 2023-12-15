@@ -1,13 +1,11 @@
 import json
 import re
 from dataclasses import dataclass
-from typing import Type
 
 from categorized_collection import CategorizedCollection
-from config_parsing.machines import parse_machines, MachineData, GeneratorData, ExtractorData
-from config_parsing.materials import parse_materials, MaterialMetadata
-from config_parsing.recipes import parse_recipes, RecipeData
-
+from config_parsing.machines import MachineData, parse_machines
+from config_parsing.materials import parse_materials
+from config_parsing.recipes import RecipeData, parse_recipes
 from core.material import MaterialSpec
 from core.process import ProcessNode
 

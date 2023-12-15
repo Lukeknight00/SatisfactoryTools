@@ -1,6 +1,6 @@
+import plotly.graph_objects as go
 from process import Process
 
-import plotly.graph_objects as go
 
 def plot_sankey(process: Process):
     ordered_vertices = [m for m in process.process_registry.values() if m.scale > 0]

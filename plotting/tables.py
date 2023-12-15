@@ -1,7 +1,6 @@
 from textwrap import dedent
 
 import plotly.graph_objects as go
-
 from process import Process
 
 

@@ -1,11 +1,14 @@
 import itertools
 import re
+from dataclasses import asdict, dataclass
 from typing import Iterable
-from dataclasses import dataclass, Field, asdict
-from collections import namedtuple
 
-from categorized_collection import CategorizedCollection
-from config_parsing.standardization import standardize, ConfigData, CYCLES_PER_MINUTE, get_class_name
+from config_parsing.standardization import (
+    CYCLES_PER_MINUTE,
+    ConfigData,
+    get_class_name,
+    standardize,
+)
 
 BUILDABLE_KEYS = [
     # assembler, constructor, blender, oilrefinery, foundry, smelter, manufacturer

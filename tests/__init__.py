@@ -1,4 +1,5 @@
-from dataclasses import make_dataclass, field
+from dataclasses import field, make_dataclass
+
 from core.material import MaterialSpec
 
 materials = [chr(i) for i in range(97, 107)]

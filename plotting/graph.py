@@ -2,9 +2,9 @@ import itertools
 import math
 from textwrap import dedent
 
-from process import Process
-from igraph import Graph, EdgeSeq
 import plotly.graph_objects as go
+from igraph import Graph
+from process import Process
 
 
 def make_hover_label(process: Process):

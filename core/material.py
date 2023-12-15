@@ -1,7 +1,8 @@
-from dataclasses import fields, dataclass
-from typing import Any, Union
-from numbers import Number
+from dataclasses import dataclass, fields
 from functools import singledispatchmethod
+from numbers import Number
+from typing import Any
+
 from typing_extensions import Self
 
 

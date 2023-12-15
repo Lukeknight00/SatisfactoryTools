@@ -1,6 +1,8 @@
-from tests import Materials
 from math import isclose
+
 import pytest
+
+from tests import Materials
 
 
 def test_materials():
