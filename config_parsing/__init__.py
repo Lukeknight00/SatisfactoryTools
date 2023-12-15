@@ -4,15 +4,15 @@ from dataclasses import dataclass
 from typing import Type
 
 from categorized_collection import CategorizedCollection
-from config_parsing.machines import parse_machines
-from config_parsing.materials import parse_materials
-from config_parsing.recipes import parse_recipes
-from machine import Machine
-from material import MaterialSpec
-from recipe import Recipe
+from config_parsing.machines import parse_machines, MachineData, GeneratorData, ExtractorData
+from config_parsing.materials import parse_materials, MaterialMetadata
+from config_parsing.recipes import parse_recipes, RecipeData
+
+from core.material import MaterialSpec
+from core.process import ProcessNode
 
 
-def simplify_config(game_config: dict) -> dict:
+def simplify_config(game_config: list[dict[..., ...]]) -> dict[str, ...]:
     simple_config = {}
     native_class_pattern = r".*\.(\w+)'?"
 
@@ -24,19 +24,9 @@ def simplify_config(game_config: dict) -> dict:
 
 
 @dataclass
-class RecipeData:
-    recipe: Recipe
-    machine: Type[Machine]
-
-    def instance(self) -> Machine:
-        return self.machine(self.recipe)
-
-
-@dataclass
 class Config:
-    recipes: CategorizedCollection[str, RecipeData]
+    recipes: CategorizedCollection[str, ProcessNode]
     materials: MaterialSpec
-    machines: dict
 
 
 def parse_config(config_path: str, encoding="utf-16"):
@@ -46,7 +36,7 @@ def parse_config(config_path: str, encoding="utf-16"):
         machines = parse_machines(config_data)
         recipes = parse_recipes(config_data)
 
-    return Config(materials=materials, recipes=recipes, machines=machines)
+    return Config(materials=materials, recipes=recipes)
 
 
 def _make_recipe_data(recipes: CategorizedCollection, machines: dict) -> CategorizedCollection:
@@ -63,3 +53,7 @@ def _make_recipe_data(recipes: CategorizedCollection, machines: dict) -> Categor
                 recipe_data.set_tag(recipe_name, tag)
 
     return recipe_data
+
+
+def _make_process_node(recipe: RecipeData, machines: list[MachineData]):
+    ...

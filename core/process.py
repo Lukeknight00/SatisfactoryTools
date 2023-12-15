@@ -176,9 +176,11 @@ class Process(CompositeProcessNode):
         # use -1 factor to convert problem of materials * coeefficients >= outputs to minimization
         # production >= target
         bounds = (0, None)
-        solution = linprog(c=costs, A_ub=material_constraints * -1, b_ub=output_lower_bound * -1, bounds = bounds)
+        solution = linprog(c=costs,
+                           bounds=bounds,
+                           A_ub=material_constraints * -1, b_ub=output_lower_bound * -1)
 
-        # temporary during testing
+        # temporary during testing, parse into instance of self
         return solution
 
     @classmethod
@@ -210,8 +212,9 @@ class Process(CompositeProcessNode):
         bounds = (0, None)
 
         solution = linprog(c=costs,
+                           bounds=bounds,
                            A_ub=material_constraints*-1,
                            b_ub=material_consumption_upper_bound)
 
-        # temporary during testing
+        # temporary during testing, parse into instance of self
         return solution

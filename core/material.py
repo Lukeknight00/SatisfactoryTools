@@ -12,7 +12,6 @@ class _SignalClass:
 
 @dataclass(frozen=True)
 class MaterialSpec(_SignalClass):
-    # TODO: make this an attr accessible default dict, rather than dynamic dataclass
 
     @classmethod
     def empty(cls) -> Self:
