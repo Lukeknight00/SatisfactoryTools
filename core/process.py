@@ -165,7 +165,7 @@ class Process(CompositeProcessNode):
         """
         output = ProcessNode("Output", target_output, target_output, 0, 0)
 
-        connected_nodes = cls._filter_eligible_nodes(output, process_nodes + [output])
+        connected_nodes = cls._filter_eligible_nodes(output, process_nodes)
         costs = [1 for _ in connected_nodes]  # TODO: cost per recipe
         output_lower_bound = np.array(dataclass_to_list(target_output))
 
@@ -189,32 +189,29 @@ class Process(CompositeProcessNode):
         by future work that constrains extractors by total available supply or changes how extractor
         cost is modelled.
         """
-        output = ProcessNode("Output", target_output, target_output, 0, 0)
+        # sinks node for output, mirror to minimize input requiring source nodes for ingredients
+        output = ProcessNode("Output", target_output, target_output.empty(), 0, 0)
 
-        visited = cls._filter_eligible_nodes(output, process_nodes + [output])
+        visited = cls._filter_eligible_nodes(output, process_nodes)
 
         # small penalty for using machines, to avoid creating redundant loops, reward for producing
         # more output
         costs = [-1 if node is output else .0001 for node in visited]  # TODO: cost per recipe
 
-        # matrix where each machine is a column and each material is a row
+        # matrix where each machine is a column and each material is a row. production is positive,
+        # consumption is negative
         material_constraints = np.array(
             [dataclass_to_list(node.output_materials - node.input_materials) for node in visited]).T
 
         material_consumption_upper_bound = dataclass_to_list(available_materials)
 
-        # production_rows = np.nonzero(dataclass_to_list(target_output))
-
-        # material_constraints[production_rows] *= -1
-
-        # consumption <= available
+        # -1*consumption <= available
         # byproducts >= 0
         bounds = (0, None)
 
         solution = linprog(c=costs,
-                           A_ub=material_constraints,
+                           A_ub=material_constraints*-1,
                            b_ub=material_consumption_upper_bound)
 
         # temporary during testing
-        breakpoint()
         return solution
