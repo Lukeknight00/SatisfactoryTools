@@ -136,7 +136,7 @@ class Process(CompositeProcessNode):
     @classmethod
     def _filter_eligible_nodes(cls, output_node: ProcessNode, available_nodes: list[ProcessNode]) -> list[ProcessNode]:
         graph = cls._make_graph([output_node] + available_nodes)
-        return graph.ancestors(output_node)
+        return nx.ancestors(graph, output_node)
 
     @staticmethod
     def _make_graph(nodes: list[ProcessNode]) -> nx.MultiGraph:
@@ -154,7 +154,6 @@ class Process(CompositeProcessNode):
                     graph.add_edge(node_2, node_1)
 
         return graph
-
 
     @classmethod
     def minimize_input(cls, target_output: MaterialSpec, process_nodes: list[ProcessNode],include_power=False):

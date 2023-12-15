@@ -99,6 +99,9 @@ class MaterialSpec(_SignalClass):
 
     @__truediv__.register(_SignalClass)
     def _(self, other: Self) -> Number:
+        if all(value == 0 for _, value in other):
+            raise ZeroDivisionError("Cannot divide by empty MaterialSpec.")
+
         return min(getattr(self, name) / value for name, value in other if value > 0)
 
     @singledispatchmethod
@@ -107,6 +110,9 @@ class MaterialSpec(_SignalClass):
 
     @__floordiv__.register(_SignalClass)
     def _(self, other: Self) -> int:
+        if all(value == 0 for _, value in other):
+            raise ZeroDivisionError("Cannot divide by empty MaterialSpec.")
+
         return min(getattr(self, name) // value for name, value in other if value > 0)
 
     @__floordiv__.register
