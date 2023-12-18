@@ -14,7 +14,9 @@ dependencies = [
   "plotly",
   "networkx",
   "scipy",
-  "typing_extensions"
+  "typing_extensions",
+  "toml",
+  "thefuzz"
 ]
 
 [tool.mypy]
