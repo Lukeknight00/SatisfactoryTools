@@ -1,9 +1,9 @@
 from nicegui import ui
 from .widgets import fuzzy_sort_picker
 from satisfactory_tools.categorized_collection import CategorizedCollection
+import random
+import string
 
-
-ui.label("Satisfactory Planning")
 
 # @ui.page('/{process_file}')
 # def process(process_file: str):
@@ -11,16 +11,10 @@ ui.label("Satisfactory Planning")
 #     with open(process_file) as f:
 #         ...
 
-test_collection = CategorizedCollection()
-test_collection["a"] = 1
-test_collection["b"] = 2
-test_collection["c"] = 3
-test_collection["d"] = 4
-
-test_collection.set_tag("a", "letter")
-test_collection.set_tag("b", "number")
-test_collection.set_tag("c", "animal")
-test_collection.set_tag("d", "vegetable")
+tags = ["".join(random.choices(string.ascii_letters, k=random.randint(5, 10))) for _ in range(15)]
+items = {"".join(random.choices(string.ascii_letters, k=random.randint(5, 10))): i for i in range(200)}
+tag_assignments = {tag: set(random.choices(list(items.keys()), k=random.randint(4, 40))) for tag in tags}
+test_collection = CategorizedCollection(items, tag_assignments)
 fuzzy_sort_picker(ui, test_collection)
 
 ui.run()

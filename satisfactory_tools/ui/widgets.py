@@ -5,24 +5,20 @@ from collections import Counter
 from functools import partial
 
 
-def material_selection():
-    pass
-
 class Picker:
     def __init__(self, elements: CategorizedCollection[str, ...]):
         self.elements = elements
-        self._visible = {key: True for key in self.elements.keys()}
         self._selected = {key: False for key in self.elements.keys()}
+        self._selector_visibility = {key: True for key in self.elements.keys()}
 
-    def _selected_for_category(self, category: str) -> int:
-        return sum(self.selected[k] for k in self.elements.tag[category].keys())
-
-    # def _selected
+        self._category_visibility = {key: True for key in self.elements.keys()}
+        self._category_counters = {key: 0 for key in self.elements.keys()}
 
     def render_category_selectors(self, ui: ui) -> None:
         for tag in self.elements.tags.keys():
-            with ui.button(tag, on_click=partial(self._category_select, tag)):
-                ui.badge(0).bind_text_from(self._categories, tag).props("floating")
+            with ui.circular_progress(max=len(list(self.elements.tag(tag).values())), show_value=False).bind_value_from(self._category_counters, tag).bind_visibility_from(self._category_visibility, tag):
+                ui.button(tag, on_click=partial(self._category_select, tag)).props("flat round").bind_visibility_from(self._category_visibility, tag)
+
 
     def render_search_box(self, ui: ui) -> None:
         searchbox = ui.input(placeholder="Search...", on_change=lambda e: self._filter(e.value))
@@ -30,29 +26,55 @@ class Picker:
 
     def render_selectors(self, ui: ui) -> None:
         for key in self.elements.keys():
-            switch = ui.switch(key)
+            # FIXME: there might be an update order thing here, with a race between updating selected
+            # FIXME: and updating the category selectors. The on_change might have the value in an event,
+            # FIXME: which would obviate this issue entirely.
+            # FIXME: there's also a parallel issue, in that selecting by category will trigger the
+            # FIXME: on_change for every element in the category
+            switch = ui.switch(key, on_change=partial(self._update_category_selectors, item=key))
             switch.bind_value(self._selected, key)
-            switch.bind_visibility_from(self._visible, key)
+            switch.bind_visibility_from(self._selector_visibility, key)
 
     def _category_select(self, category: str) -> None:
-        for value in set(self.elements.tag(category).keys()) & {k for k, v in self._visible.items() if v}:
-            self._selected[value] = True
+        visible_keys = set(self.elements.tag(category).keys()) & {k for k, v in self._selector_visibility.items() if v}
+        all_selected = all(self._selected[key] for key in visible_keys)
+        for value in visible_keys:
+            self._selected[value] = not all_selected
+
+        self._update_category_selectors()
+
+    def _update_category_selectors(self, item: str | None = None):
+        if item:
+            update_tags = self.elements.value_tags(item)
+        else:
+            update_tags = set(self.elements.tags.keys())
+
+        for tag in update_tags:
+            self._category_counters[tag] = sum(self._selected[k] for k in self.elements.tag(tag).keys())
 
     def _filter(self, search: str):
-        # TODO: also filter category visiblity
         if not search:
-            for key in self._visible.keys():
-                self._visible[key] = True
+            for key in self._selector_visibility.keys():
+                self._selector_visibility[key] = True
+
+            for key in self._category_visibility.keys():
+                self._category_visibility[key] = True
+
             return
 
         threshold = 75
+
         scores = process.extract(search, self.elements.keys())
         for k, score in scores:
-            self._visible[k] = score
+            self._selector_visibility[k] = score > threshold
+
+        scores = process.extract(search, self.elements.tags.keys())
+        for k, score in scores:
+            self._category_visibility[k] = (score > threshold) or any(self._selector_visibility[s] for s in self.elements.tag(k).keys())
 
     @property
     def selected(self) -> set[...]:
-        yield from (elements[key] for key, value in self._selected.items() if value)
+        yield from (self.elements[key] for key, value in self._selected.items() if value)
 
 
 
