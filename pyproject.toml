@@ -8,15 +8,14 @@ version = "0.8.0"
 requires-python = ">=3.11"
 description = "Planning and Plotting tools for satisfactory update 8"
 dependencies = [
-  "ipytree",
-  "ipywidgets",
   "numpy",
   "plotly",
   "networkx",
   "scipy",
   "typing_extensions",
   "toml",
-  "thefuzz"
+  "thefuzz", 
+  "nicegui"
 ]
 
 [tool.mypy]

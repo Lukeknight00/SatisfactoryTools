@@ -1,4 +1,4 @@
-import core.process as module
+import satisfactory_tools.core.process as module
 from tests import Materials
 
 
