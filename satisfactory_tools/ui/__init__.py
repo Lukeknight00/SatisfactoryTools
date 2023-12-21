@@ -18,8 +18,22 @@ test_collection = CategorizedCollection(items, tag_assignments)
 
 ui.dark_mode()
 
-with ui.column() as column:
-    column.tailwind.width
-    fuzzy_sort_picker(ui, test_collection)
+with ui.stepper().props("vertical").classes("w-full") as stepper:
+    with ui.step("Target Output"):
+        fuzzy_sort_picker(ui, test_collection)
+        ui.button("Apply")
+    with ui.step("Input Constraints"):
+        fuzzy_sort_picker(ui, test_collection)
+        with ui.row():
+            ui.button("Skip")
+            ui.button("Apply")
+    with ui.step("Available Recipes"):
+        fuzzy_sort_picker(ui, test_collection)
+        ui.button("Apply")
+    with ui.step("Optimize"):
+        with ui.row():
+            # TODO: more description
+            ui.button("Maximize output")
+            ui.button("Minimize input")
 
 ui.run()
