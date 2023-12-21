@@ -72,7 +72,7 @@ class Picker:
             self._selector_visibility[k] = (score > threshold) or any(visible_categories & self.elements.value_tags(k))
 
         for k, score in tag_scores:
-            self._category_visibility[k] = (score > threshold) or any(self._selector_visibility[s] for s in self.elements.tag(k).keys())
+            self._category_visibility[k] = (score > threshold)
 
     @property
     def selected(self) -> set[...]:
