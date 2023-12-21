@@ -15,6 +15,11 @@ tags = ["".join(random.choices(string.ascii_letters, k=random.randint(5, 10))) f
 items = {"".join(random.choices(string.ascii_letters, k=random.randint(5, 10))): i for i in range(200)}
 tag_assignments = {tag: set(random.choices(list(items.keys()), k=random.randint(4, 40))) for tag in tags}
 test_collection = CategorizedCollection(items, tag_assignments)
-fuzzy_sort_picker(ui, test_collection)
+
+ui.dark_mode()
+
+with ui.column() as column:
+    column.tailwind.width
+    fuzzy_sort_picker(ui, test_collection)
 
 ui.run()

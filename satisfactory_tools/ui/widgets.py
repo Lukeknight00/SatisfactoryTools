@@ -44,6 +44,7 @@ class Picker:
         self._update_category_selectors()
 
     def _update_category_selectors(self, item: str | None = None):
+        print("category update")
         if item:
             update_tags = self.elements.value_tags(item)
         else:
@@ -64,12 +65,13 @@ class Picker:
 
         threshold = 75
 
-        scores = process.extract(search, self.elements.keys())
-        for k, score in scores:
-            self._selector_visibility[k] = score > threshold
+        item_scores = process.extract(search, self.elements.keys(), limit=None)
+        tag_scores = process.extract(search, self.elements.tags.keys(), limit=None)
+        visible_categories = {k for k, score in tag_scores if score > threshold}
+        for k, score in item_scores:
+            self._selector_visibility[k] = (score > threshold) or any(visible_categories & self.elements.value_tags(k))
 
-        scores = process.extract(search, self.elements.tags.keys())
-        for k, score in scores:
+        for k, score in tag_scores:
             self._category_visibility[k] = (score > threshold) or any(self._selector_visibility[s] for s in self.elements.tag(k).keys())
 
     @property
@@ -80,19 +82,14 @@ class Picker:
 
 def fuzzy_sort_picker(ui: ui, elements: CategorizedCollection[str, ...]):
     picker = Picker(elements)
-    with ui.splitter() as splitter:
-        with splitter.before:
-            picker.render_search_box(ui)
-            # TODO: categories--use badges to indicate total selected
-            # TODO: state flow: unselected -> selected, selected -> unselected, partially selected -> unselected
-            # partial selection from filtered view, in which case you go from unselected -> partially selected, or by 
-            # selecting checks manually
-            picker.render_category_selectors(ui)
+    picker.render_search_box(ui)
+    # TODO: categories--use badges to indicate total selected
+    # TODO: state flow: unselected -> selected, selected -> unselected, partially selected -> unselected
+    # partial selection from filtered view, in which case you go from unselected -> partially selected, or by 
+    # selecting checks manually
+    with ui.row() as grid:
+        picker.render_category_selectors(ui)
 
-        with splitter.after:
-            with ui.scroll_area(), ui.grid():
-                picker.render_selectors(ui)
+    with ui.row() as grid:
+        picker.render_selectors(ui)
 
-
-def _fuzzy_filter(search: str, search_over: CategorizedCollection[str, ...]) -> CategorizedCollection:
-    pass
